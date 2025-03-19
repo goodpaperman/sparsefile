@@ -8,12 +8,13 @@
 
 int USE_SET_FILE_VALID_DATA = 0;
 int WRITE_WHOLE_FILE = 0;
+char FILL_CHAR = '\0'; 
 
 int main(int argc, char* argv[])
 {
     if (argc < 3)
     {
-        std::cout << "Usage: sparsefile file length(in GB) [set-file-valid-data] [write-whole-file]\n";
+        std::cout << "Usage: sparsefile file length(in GB) [set-file-valid-data] [write-whole-file] [fill-char]\n";
         return 1; 
     }
 
@@ -26,6 +27,9 @@ int main(int argc, char* argv[])
 
     if (argc > 4)
         WRITE_WHOLE_FILE = atoi(argv[4]);
+
+    if (argc > 5)
+        FILL_CHAR = argv[5][0];
 
     do
     {
@@ -95,7 +99,7 @@ int main(int argc, char* argv[])
                 break;
             }
 
-            char buf[4096] = { 0 }; // { 1 }; 
+            char buf[4096] = { FILL_CHAR }; 
             c_timer t;
             DWORD bytes = 0;
             for (long long i = 0; i < file_size; i += 4096)
@@ -124,7 +128,7 @@ int main(int argc, char* argv[])
 
             DWORD bytes = 0;
             c_timer t;
-            char const* buf = "\0"; // " "; 
+            char buf[1] = { FILL_CHAR }; 
             if (!::WriteFile(file_handle, buf, 1, &bytes, NULL) || bytes != 1)
             {
                 std::cout << "WriteFile failed, error " << GetLastError() << ", written " << bytes << std::endl;
