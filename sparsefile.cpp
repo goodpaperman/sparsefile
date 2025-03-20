@@ -16,14 +16,15 @@ int main(int argc, char* argv[])
 {
     if (argc < 3)
     {
-        std::cout << "Usage: sparsefile file length(in GB) [set-file-end-of-file-info] [set-file-valid-data] [sparse-file] [write-file-mode 0|1|2] [fill-char]\n";
+        std::cout << "Usage: sparsefile file length(in GB) [set-file-end-of-file-info] [set-file-valid-data] [sparse-file] [write-file-mode 0|1|2] [fill-char] [write-position(in GB)]\n";
         return 1; 
     }
 
     int ret = 0; 
     HANDLE file_handle = INVALID_HANDLE_VALUE;
-    LARGE_INTEGER pos = { 0 };
+    LARGE_INTEGER off = { 0 };
     long long file_size = atoll(argv[2]) * 1024 * 1024 * 1024;  // unit in GB
+    off.QuadPart = file_size - 1; 
 
     if (argc > 3)
         USE_FILE_END_OF_FILE_INFO = atoi(argv[3]);
@@ -39,6 +40,9 @@ int main(int argc, char* argv[])
 
     if (argc > 7)
         FILL_CHAR = argv[7][0];
+
+    if (argc > 8)
+        off.QuadPart = atoll(argv[8]) * 1024 * 1024 * 1024;  // unit in GB
 
     do
     {
@@ -68,24 +72,25 @@ int main(int argc, char* argv[])
             if (!SetFileInformationByHandle(file_handle, FileEndOfFileInfo, &info, sizeof(info)))
             {
                 std::cout << "SetFileInformationByHandle failed, error " << GetLastError() << std::endl;
-                ret = 5;
+                ret = 3;
                 break;
             }
         }
         else
         {
+            LARGE_INTEGER pos; 
             pos.QuadPart = file_size;
             if (::SetFilePointerEx(file_handle, pos, NULL, FILE_BEGIN) == 0)
             {
                 std::cout << "SetFilePointerEx failed, error " << GetLastError() << std::endl;
-                ret = 3;
+                ret = 4;
                 break;
             }
 
             if (!::SetEndOfFile(file_handle))
             {
                 std::cout << "SetEndOfFile failed, error " << GetLastError() << std::endl;
-                ret = 4;
+                ret = 5;
                 break;
             }
         }
@@ -117,8 +122,7 @@ int main(int argc, char* argv[])
         if (WRITE_FILE_MODE == 1)
         {
             // write a byte at end
-            pos.QuadPart = file_size - 1;
-            if (::SetFilePointerEx(file_handle, pos, NULL, FILE_BEGIN) == 0)
+            if (::SetFilePointerEx(file_handle, off, NULL, FILE_BEGIN) == 0)
             {
                 std::cout << "SetFilePointerEx failed, error " << GetLastError() << std::endl;
                 ret = 30;
@@ -135,13 +139,13 @@ int main(int argc, char* argv[])
             }
 
             int elapse = t.get_interval();
-            std::cout << "write file end a byte elapse " << elapse << " ms" << std::endl;
+            std::cout << "write file end a byte elapse " << elapse << " ms, position " << off.QuadPart << std::endl;
         }
         else if (WRITE_FILE_MODE == 2)
         {
             // write whole file
-            pos.QuadPart = 0;
-            if (::SetFilePointerEx(file_handle, pos, NULL, FILE_BEGIN) == 0)
+            off.QuadPart = 0;
+            if (::SetFilePointerEx(file_handle, off, NULL, FILE_BEGIN) == 0)
             {
                 std::cout << "SetFilePointerEx failed, error " << GetLastError() << std::endl;
                 ret = 32;
@@ -155,7 +159,7 @@ int main(int argc, char* argv[])
                 if (!::WriteFile(file_handle, buf, 4096, &bytes, NULL) || bytes != 4096)
                 {
                     std::cout << "WriteFile failed, error " << GetLastError() << ", written " << bytes << std::endl;
-                    ret = 21;
+                    ret = 33;
                     break;
                 }
             }
