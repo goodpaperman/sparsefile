@@ -144,19 +144,19 @@ int main(int argc, char* argv[])
         else if (WRITE_FILE_MODE == 2)
         {
             // write whole file
-            off.QuadPart = 0;
-            if (::SetFilePointerEx(file_handle, off, NULL, FILE_BEGIN) == 0)
-            {
-                std::cout << "SetFilePointerEx failed, error " << GetLastError() << std::endl;
-                ret = 32;
-                break;
-            }
-
             c_timer t;
-            char buf[4096] = { FILL_CHAR };
-            for (long long i = 0; i < file_size; i += 4096)
+            char buf[1] = { FILL_CHAR };
+            for (long long i = 0; i < file_size; i += 1024*1024 /* write every 1M */)
             {
-                if (!::WriteFile(file_handle, buf, 4096, &bytes, NULL) || bytes != 4096)
+                off.QuadPart = i;
+                if (::SetFilePointerEx(file_handle, off, NULL, FILE_BEGIN) == 0)
+                {
+                    std::cout << "SetFilePointerEx failed, error " << GetLastError() << std::endl;
+                    ret = 32;
+                    break;
+                }
+
+                if (!::WriteFile(file_handle, buf, 1, &bytes, NULL) || bytes != 1)
                 {
                     std::cout << "WriteFile failed, error " << GetLastError() << ", written " << bytes << std::endl;
                     ret = 33;
