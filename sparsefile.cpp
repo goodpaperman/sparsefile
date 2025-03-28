@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
 {
     if (argc < 3)
     {
-        std::cout << "Usage: sparsefile file length(in GB) [set-file-end-of-file-info] [set-file-valid-data] [sparse-file] [write-file-mode 0|1|2] [fill-char] [write-position(in GB)]\n";
+        std::cout << "Usage: sparsefile file length(in GB) [set-file-end-of-file-info] [set-file-valid-data] [sparse-file] [write-file-mode 0|1|2|3] [fill-char] [write-position(in GB)]\n";
         return 1; 
     }
 
@@ -143,7 +143,7 @@ int main(int argc, char* argv[])
         }
         else if (WRITE_FILE_MODE == 2)
         {
-            // write whole file
+            // write 4K every 1M
             c_timer t;
             char buf[1] = { FILL_CHAR };
             for (long long i = 0; i < file_size; i += 1024*1024 /* write every 1M */)
@@ -160,6 +160,32 @@ int main(int argc, char* argv[])
                 {
                     std::cout << "WriteFile failed, error " << GetLastError() << ", written " << bytes << std::endl;
                     ret = 33;
+                    break;
+                }
+            }
+
+            int elapse = t.get_interval();
+            std::cout << "write 4K every 1M elapse " << elapse << " ms" << std::endl;
+        }
+        else if (WRITE_FILE_MODE == 3)
+        {
+            // write whole file
+            c_timer t;
+            char buf[4096] = { FILL_CHAR };
+            off.QuadPart = 0;
+            if (::SetFilePointerEx(file_handle, off, NULL, FILE_BEGIN) == 0)
+            {
+                std::cout << "SetFilePointerEx failed, error " << GetLastError() << std::endl;
+                ret = 34;
+                break;
+            }
+
+            for (long long i = 0; i < file_size; i += sizeof(buf))
+            {
+                if (!::WriteFile(file_handle, buf, sizeof(buf), &bytes, NULL) || bytes != sizeof(buf))
+                {
+                    std::cout << "WriteFile failed, error " << GetLastError() << ", written " << bytes << std::endl;
+                    ret = 35;
                     break;
                 }
             }
